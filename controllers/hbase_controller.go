@@ -26,11 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/go-logr/logr"
-	hbasev1 "github.com/timoha/hbase-k8s-operator/api/v1"
-	"github.com/tsuna/gohbase"
-	"github.com/tsuna/gohbase/hrpc"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -41,20 +36,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-)
 
-/*
-Copyright 2015 The Kubernetes Authors.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+	"github.com/davecgh/go-spew/spew"
+	"github.com/go-logr/logr"
+	hbasev1 "github.com/timoha/hbase-k8s-operator/api/v1"
+	"github.com/tsuna/gohbase"
+	"github.com/tsuna/gohbase/hrpc"
+)
 
 // DeepHashObject writes specified object to hash using the spew library
 // which follows pointers and prints actual values of the nested objects
@@ -82,15 +70,14 @@ type HBaseReconciler struct {
 	GhAdmin gohbase.AdminClient
 }
 
-// +kubebuilder:rbac:groups=hbase.elenskiy.co,namespace="hbase",resources=hbases,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hbase.elenskiy.co,namespace="hbase",resources=hbases/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",namespace="hbase",resources=pods,verbs=get;list;delete;watch
-// +kubebuilder:rbac:groups="",namespace="hbase",resources=configmaps,verbs=*
-// +kubebuilder:rbac:groups="",namespace="hbase",resources=services,verbs=*
-// +kubebuilder:rbac:groups="apps",namespace="hbase",resources=statefulsets,verbs=*
+//+kubebuilder:rbac:groups=hbase.elenskiy.co,namespace="hbase",resources=hbases,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=hbase.elenskiy.co,namespace="hbase",resources=hbases/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",namespace="hbase",resources=pods,verbs=get;list;delete;watch
+//+kubebuilder:rbac:groups="",namespace="hbase",resources=configmaps,verbs=*
+//+kubebuilder:rbac:groups="",namespace="hbase",resources=services,verbs=*
+//+kubebuilder:rbac:groups="apps",namespace="hbase",resources=statefulsets,verbs=*
 
-func (r *HBaseReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("hbase", req.NamespacedName)
 
 	log.Info("got request")
@@ -760,6 +747,7 @@ func (r *HBaseReconciler) headlessService(hb *hbasev1.HBase) *corev1.Service {
 	return srv
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *HBaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hbasev1.HBase{}).

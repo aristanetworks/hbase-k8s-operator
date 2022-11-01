@@ -1,13 +1,15 @@
-name: test HBase kubernetes operator
+name: Test hbase-k8s-operator
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
+        with:
+          go-version: ~1.18
       - run: make test

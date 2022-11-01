@@ -1,6 +1,4 @@
 /*
-
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -26,6 +24,9 @@ import (
 
 // HBaseSpec defines the desired state of HBase
 type HBaseSpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
 	// MasterSpec is definition of HBase Master server
 	MasterSpec ServerSpec `json:"masterSpec,omitempty"`
 	// RegionServerSpec is definition of HBase RegionServer
@@ -62,21 +63,23 @@ type ServerMetadata struct {
 // ServerSpec is a specification for an HBase server (Master or Regionserver)
 type ServerSpec struct {
 	// PodSpec aprovides customisation options (affinity rules, resource requests, and so on).
-	// +kubebuilder:validation:Optional
+	//+kubebuilder:validation:Optional
 	PodSpec corev1.PodSpec `json:"podSpec,omitempty"`
 	// Metadata provides customisation options (labels, annotations)
 	Metadata ServerMetadata `json:"metadata,omitempty"`
 	// Count of replicas to deploy.
-	// +kubebuilder:validation:Optional
+	//+kubebuilder:validation:Optional
 	Count int32 `json:"count,omitempty"`
 }
 
 // HBaseStatus defines the observed state of HBase
 type HBaseStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 
 // HBase is the Schema for the hbases API
 type HBase struct {
@@ -87,7 +90,7 @@ type HBase struct {
 	Status HBaseStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // HBaseList contains a list of HBase
 type HBaseList struct {
