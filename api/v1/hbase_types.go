@@ -69,10 +69,25 @@ type ServerSpec struct {
 	Count int32 `json:"count,omitempty"`
 }
 
+// HBasePhase is the phase HBase is in from the controller point of view.
+type HBasePhase string
+
+const (
+	// HBaseReadyPhase is operating at the desired spec.
+	HBaseReadyPhase HBasePhase = "Ready"
+	// HBaseApplyingChangesPhase controller is working towards a desired state.
+	HBaseApplyingChangesPhase HBasePhase = "ApplyingChanges"
+	// HBaseResourceInvalid is marking a resource as invalid, should never happen if admission control is installed correctly.
+	HBaseResourceInvalidPhase HBasePhase = "Invalid"
+)
+
 // HBaseStatus defines the observed state of HBase
 type HBaseStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Phase is a reconciliation phase of hbase
+	Phase HBasePhase `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true
