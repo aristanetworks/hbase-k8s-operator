@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/prometheus/client_golang/prometheus"
 	hbasev1 "github.com/timoha/hbase-k8s-operator/api/v1"
 	"github.com/tsuna/gohbase/hrpc"
 	appsv1 "k8s.io/api/apps/v1"
@@ -54,13 +55,6 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 
 const (
 	headlessServiceName = "hbase"
-)
-
-const (
-	hbasePhaseUnknown float64 = iota
-	hbasePhaseApplyingChanges
-	hbasePhaseReady
-	hbasePhaseResourceInvalid
 )
 
 func (r *HBaseReconciler) ensureConfigMap(hb *hbasev1.HBase, name types.NamespacedName) (bool, error) {
@@ -636,22 +630,11 @@ func (r *HBaseReconciler) headlessService(hb *hbasev1.HBase) *corev1.Service {
 
 // updateStatus updates the status of hbase and exposes same as a metrics
 func (r *HBaseReconciler) updateStatus(ctx context.Context, hb *hbasev1.HBase) {
-	updateReconciliationPhaseMetrics(hb)
+	// update reconciliation phase metrics
+	hbaseReconciliationPhaseMetric.DeletePartialMatch(
+		prometheus.Labels{"namespace": hb.Namespace, "name": hb.Name})
+	hbaseReconciliationPhaseMetric.WithLabelValues(
+		hb.Namespace, hb.Name, string(hb.Status.Phase)).Set(1)
+
 	r.Status().Update(ctx, hb)
-}
-
-// updates reconciliation phase metrics
-func updateReconciliationPhaseMetrics(hb *hbasev1.HBase) {
-	var phaseToStatusValue = map[hbasev1.HBasePhase]float64{
-		hbasev1.HBaseApplyingChangesPhase: hbasePhaseApplyingChanges,
-		hbasev1.HBaseReadyPhase:           hbasePhaseReady,
-		hbasev1.HBaseResourceInvalidPhase: hbasePhaseResourceInvalid,
-	}
-
-	statusValue, exists := phaseToStatusValue[hb.Status.Phase]
-	if !exists {
-		statusValue = hbasePhaseUnknown
-	}
-
-	hbaseReconciliationPhaseMetric.WithLabelValues(hb.Namespace, hb.Name).Set(statusValue)
 }

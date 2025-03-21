@@ -43,13 +43,20 @@ type HBaseReconciler struct {
 	GhAdmin gohbase.AdminClient
 }
 
+const (
+	promNamespace = "hbase"
+	promSubsystem = "operator"
+)
+
 var (
 	hbaseReconciliationPhaseMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "hbase_reconciliation_phase",
-			Help: `Current phase of HBase (1=ApplyingChanges, 2=Ready, 3=Invalid, 0=Unknown)`,
+			Name:      "reconciliation_phase",
+			Help:      "Current reconciliation phase of HBase",
+			Namespace: promNamespace,
+			Subsystem: promSubsystem,
 		},
-		[]string{"namespace", "name"},
+		[]string{"namespace", "name", "phase"},
 	)
 )
 
