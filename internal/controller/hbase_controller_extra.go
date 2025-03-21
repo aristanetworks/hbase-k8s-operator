@@ -56,6 +56,13 @@ const (
 	headlessServiceName = "hbase"
 )
 
+const (
+	hbasePhaseUnknown float64 = iota
+	hbasePhaseApplyingChanges
+	hbasePhaseReady
+	hbasePhaseResourceInvalid
+)
+
 func (r *HBaseReconciler) ensureConfigMap(hb *hbasev1.HBase, name types.NamespacedName) (bool, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := r.Get(context.TODO(), name, configMap); err != nil {
@@ -625,4 +632,26 @@ func (r *HBaseReconciler) headlessService(hb *hbasev1.HBase) *corev1.Service {
 	}
 	_ = controllerutil.SetControllerReference(hb, srv, r.Scheme)
 	return srv
+}
+
+// updateStatus updates the status of hbase and exposes same as a metrics
+func (r *HBaseReconciler) updateStatus(ctx context.Context, hb *hbasev1.HBase) {
+	updateReconciliationPhaseMetrics(hb)
+	r.Status().Update(ctx, hb)
+}
+
+// updates reconciliation phase metrics
+func updateReconciliationPhaseMetrics(hb *hbasev1.HBase) {
+	var phaseToStatusValue = map[hbasev1.HBasePhase]float64{
+		hbasev1.HBaseApplyingChangesPhase: hbasePhaseApplyingChanges,
+		hbasev1.HBaseReadyPhase:           hbasePhaseReady,
+		hbasev1.HBaseResourceInvalidPhase: hbasePhaseResourceInvalid,
+	}
+
+	statusValue, exists := phaseToStatusValue[hb.Status.Phase]
+	if !exists {
+		statusValue = hbasePhaseUnknown
+	}
+
+	hbaseReconciliationPhaseMetric.WithLabelValues(hb.Namespace, hb.Name).Set(statusValue)
 }

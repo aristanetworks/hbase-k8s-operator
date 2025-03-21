@@ -26,8 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	hbasev1 "github.com/timoha/hbase-k8s-operator/api/v1"
 	"github.com/tsuna/gohbase"
 )
@@ -40,6 +42,16 @@ type HBaseReconciler struct {
 	Log     logr.Logger
 	GhAdmin gohbase.AdminClient
 }
+
+var (
+	hbaseReconciliationPhaseMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "hbase_reconciliation_phase",
+			Help: `Current phase of HBase (1=ApplyingChanges, 2=Ready, 3=Invalid, 0=Unknown)`,
+		},
+		[]string{"namespace", "name"},
+	)
+)
 
 //+kubebuilder:rbac:groups=hbase.elenskiy.co,resources=hbases,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=hbase.elenskiy.co,resources=hbases/status,verbs=get;update;patch
@@ -80,7 +92,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	// Update the state when this function exits
-	defer r.Status().Update(ctx, app)
+	defer r.updateStatus(ctx, app)
 
 	serviceOk, err := r.ensureService(app)
 	if err != nil {
@@ -196,4 +208,8 @@ func (r *HBaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
+}
+
+func init() {
+	metrics.Registry.MustRegister(hbaseReconciliationPhaseMetric)
 }
