@@ -15044,6 +15044,10 @@ spec:
             type: object
           status:
             description: HBaseStatus defines the observed state of HBase
+            properties:
+              phase:
+                description: Phase is a reconciliation phase of hbase
+                type: string
             type: object
         type: object
     served: true

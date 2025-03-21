@@ -75,13 +75,21 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	log.Info("got HBase CRD")
+	if app.Status.Phase == "" {
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+	}
+
+	// Update the state when this function exits
+	defer r.Status().Update(ctx, app)
 
 	serviceOk, err := r.ensureService(app)
 	if err != nil {
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 	if !serviceOk {
 		log.Info("HBase service reconfigured, reconciling again")
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("HBase headless service is in sync")
@@ -90,10 +98,12 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	configMapName := getConfigMapName(app)
 	cmOk, err := r.ensureConfigMap(app, configMapName)
 	if err != nil {
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 	if !cmOk {
 		log.Info("HBase ConfigMap reconfigured, reconciling again")
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("HBase ConfigMap is in sync")
@@ -103,10 +113,12 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	masterSts, masterUpdated, err := r.ensureStatefulSet(app, masterName, configMapName, app.Spec.MasterSpec)
 	if err != nil {
 		r.Log.Error(err, "Failed reconciling HBase Master StatefulSet")
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 	if masterUpdated {
 		log.Info("HBase Master StatefulSet updated, reconciling again")
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("HBase Master StatefulSet is in sync")
@@ -116,10 +128,12 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	rsSts, rsUpdated, err := r.ensureStatefulSet(app, rsName, configMapName, app.Spec.RegionServerSpec)
 	if err != nil {
 		r.Log.Error(err, "Failed reconciling HBase RegionServer StatefulSet")
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 	if rsUpdated {
 		log.Info("HBase RegionServer StatefulSet updated")
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("RegionServer StatefulSet is in sync")
@@ -129,10 +143,12 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// be able to fix incorrect config and not fight with operator
 	rit, err := r.regionsInTransition()
 	if err != nil {
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, fmt.Errorf("failed to get regions in transition: %v", err)
 	}
 	if rit != 0 {
 		log.Info("There are regions in transition, wait and restart reconciling", "regions", rit)
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 	log.Info("There are no regions in transition")
@@ -141,9 +157,11 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	mastersOk, err := r.ensureStatefulSetPods(ctx, masterSts, r.pickMasterToDelete)
 	if err != nil {
 		r.Log.Error(err, "Failed reconciling HBase Master pods")
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 	if !mastersOk {
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	}
 
@@ -151,18 +169,22 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	rsOk, err := r.ensureStatefulSetPods(ctx, rsSts, r.pickRegionServerToDelete)
 	if err != nil {
 		r.Log.Error(err, "Failed reconciling HBase RegionServer pods")
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 	if !rsOk {
+		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	}
 
 	r.Log.Info("Deleting unused config maps")
 	if err := r.deleteUnusedConfigMaps(ctx, app, configMapName); err != nil {
+		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
 	}
 
 	r.Log.Info("Everything is up to date!")
+	app.Status.Phase = hbasev1.HBaseReadyPhase
 	return ctrl.Result{}, nil
 }
 
