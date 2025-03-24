@@ -81,6 +81,20 @@ const (
 	HBaseResourceInvalidPhase HBasePhase = "Invalid"
 )
 
+type HBaseProgress string
+
+const (
+	HBaseProgressUpdatingService         HBaseProgress = "UpdatingService"
+	HBaseProgressUpdatingCM              HBaseProgress = "UpdatingConfigMap"
+	HBaseProgressUpdatingMasters         HBaseProgress = "UpdatingMasters"
+	HBaseProgressUpdatingRS              HBaseProgress = "UpdatingRegionServers"
+	HBaseProgressWaitingRegionTransition HBaseProgress = "WaitingRegionTransition"
+	HBaseProgressWaitingMasters          HBaseProgress = "WaitingMasterPods"
+	HBaseProgressWaitingRS               HBaseProgress = "WaitingRegionServerPods"
+	HBaseProgressDelUnusedCM             HBaseProgress = "DeletingUnusedConfigMaps"
+	HBaseProgressReady                   HBaseProgress = "Ready"
+)
+
 // HBaseStatus defines the observed state of HBase
 type HBaseStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -88,6 +102,9 @@ type HBaseStatus struct {
 
 	// Phase is a reconciliation phase of hbase
 	Phase HBasePhase `json:"phase,omitempty"`
+
+	// ReconcileProgress is a reconcilation progress of hbase
+	ReconcileProgress HBaseProgress `json:"reconcileprogress,omitempty"`
 }
 
 //+kubebuilder:object:root=true

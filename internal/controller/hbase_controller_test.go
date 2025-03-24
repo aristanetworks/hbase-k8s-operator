@@ -264,7 +264,8 @@ var _ = Describe("HBase controller", func() {
 			By("By checking phase in status is ApplyingChanges")
 			Eventually(func() bool {
 				k8sClient.Get(ctx, hbaseLookupKey, hb)
-				return hb.Status.Phase == hbasev1.HBaseApplyingChangesPhase
+				return hb.Status.Phase == hbasev1.HBaseApplyingChangesPhase &&
+					hb.Status.ReconcileProgress == hbasev1.HBaseProgressUpdatingCM
 			}, 2*time.Second, 1*time.Millisecond).Should(BeTrue())
 
 			By("By checking HBase deployed new config map")
@@ -330,7 +331,8 @@ var _ = Describe("HBase controller", func() {
 				if err != nil {
 					return false
 				}
-				return hb.Status.Phase == hbasev1.HBaseReadyPhase
+				return hb.Status.Phase == hbasev1.HBaseReadyPhase &&
+					hb.Status.ReconcileProgress == hbasev1.HBaseProgressReady
 			}, timeout, interval).Should(BeTrue())
 
 			// --------------------------- TEST 2 ---------------------------
@@ -350,7 +352,8 @@ var _ = Describe("HBase controller", func() {
 			By("By checking phase in status is ApplyingChanges")
 			Eventually(func() bool {
 				k8sClient.Get(ctx, hbaseLookupKey, hb)
-				return hb.Status.Phase == hbasev1.HBaseApplyingChangesPhase
+				return hb.Status.Phase == hbasev1.HBaseApplyingChangesPhase &&
+					hb.Status.ReconcileProgress == hbasev1.HBaseProgressUpdatingMasters
 			}, 2*time.Second, 1*time.Millisecond).Should(BeTrue())
 
 			By("By checking HBase configmap was not updated")
@@ -416,7 +419,8 @@ var _ = Describe("HBase controller", func() {
 				if err != nil {
 					return false
 				}
-				return hb.Status.Phase == hbasev1.HBaseReadyPhase
+				return hb.Status.Phase == hbasev1.HBaseReadyPhase &&
+					hb.Status.ReconcileProgress == hbasev1.HBaseProgressReady
 			}, timeout, interval).Should(BeTrue())
 
 			// --------------------------- TEST 3 ---------------------------
@@ -437,7 +441,8 @@ var _ = Describe("HBase controller", func() {
 			By("By checking phase in status is ApplyingChanges")
 			Eventually(func() bool {
 				k8sClient.Get(ctx, hbaseLookupKey, hb)
-				return hb.Status.Phase == hbasev1.HBaseApplyingChangesPhase
+				return hb.Status.Phase == hbasev1.HBaseApplyingChangesPhase &&
+					hb.Status.ReconcileProgress == hbasev1.HBaseProgressUpdatingCM
 			}, 2*time.Second, 1*time.Millisecond).Should(BeTrue())
 
 			By("By checking HBase configmap is updated")
@@ -503,7 +508,8 @@ var _ = Describe("HBase controller", func() {
 				if err != nil {
 					return false
 				}
-				return hb.Status.Phase == hbasev1.HBaseReadyPhase
+				return hb.Status.Phase == hbasev1.HBaseReadyPhase &&
+					hb.Status.ReconcileProgress == hbasev1.HBaseProgressReady
 			}, timeout, interval).Should(BeTrue())
 
 		})
