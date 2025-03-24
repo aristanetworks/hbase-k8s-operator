@@ -634,7 +634,7 @@ func (r *HBaseReconciler) updateStatus(ctx context.Context, hb *hbasev1.HBase) {
 	hbaseReconciliationPhaseMetric.DeletePartialMatch(
 		prometheus.Labels{"namespace": hb.Namespace, "name": hb.Name})
 	hbaseReconciliationPhaseMetric.WithLabelValues(
-		hb.Namespace, hb.Name, string(hb.Status.Phase)).Set(1)
+		hb.Namespace, hb.Name, string(hb.Status.Phase), string(hb.Status.ReconcileProgress)).Set(1)
 
 	r.Status().Update(ctx, hb)
 }

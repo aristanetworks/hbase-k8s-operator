@@ -51,12 +51,12 @@ const (
 var (
 	hbaseReconciliationPhaseMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name:      "reconciliation_phase",
-			Help:      "Current reconciliation phase of HBase",
+			Name:      "reconciliation_status",
+			Help:      "Current reconciliation status of HBase",
 			Namespace: promNamespace,
 			Subsystem: promSubsystem,
 		},
-		[]string{"namespace", "name", "phase"},
+		[]string{"namespace", "name", "phase", "progress"},
 	)
 )
 
@@ -109,6 +109,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if !serviceOk {
 		log.Info("HBase service reconfigured, reconciling again")
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressUpdatingService
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("HBase headless service is in sync")
@@ -123,6 +124,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if !cmOk {
 		log.Info("HBase ConfigMap reconfigured, reconciling again")
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressUpdatingCM
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("HBase ConfigMap is in sync")
@@ -138,6 +140,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if masterUpdated {
 		log.Info("HBase Master StatefulSet updated, reconciling again")
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressUpdatingMasters
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("HBase Master StatefulSet is in sync")
@@ -153,6 +156,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if rsUpdated {
 		log.Info("HBase RegionServer StatefulSet updated")
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressUpdatingRS
 		return ctrl.Result{Requeue: true}, nil
 	}
 	log.Info("RegionServer StatefulSet is in sync")
@@ -168,6 +172,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if rit != 0 {
 		log.Info("There are regions in transition, wait and restart reconciling", "regions", rit)
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressWaitingRegionTransition
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 	log.Info("There are no regions in transition")
@@ -181,6 +186,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	if !mastersOk {
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressWaitingMasters
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	}
 
@@ -193,10 +199,12 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	if !rsOk {
 		app.Status.Phase = hbasev1.HBaseApplyingChangesPhase
+		app.Status.ReconcileProgress = hbasev1.HBaseProgressWaitingRS
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	}
 
 	r.Log.Info("Deleting unused config maps")
+	app.Status.ReconcileProgress = hbasev1.HBaseProgressDelUnusedCM
 	if err := r.deleteUnusedConfigMaps(ctx, app, configMapName); err != nil {
 		app.Status.Phase = hbasev1.HBaseResourceInvalidPhase
 		return ctrl.Result{}, err
@@ -204,6 +212,7 @@ func (r *HBaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	r.Log.Info("Everything is up to date!")
 	app.Status.Phase = hbasev1.HBaseReadyPhase
+	app.Status.ReconcileProgress = hbasev1.HBaseProgressReady
 	return ctrl.Result{}, nil
 }
 
